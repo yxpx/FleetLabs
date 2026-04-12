@@ -1,0 +1,282 @@
+================================================================================
+  FLEETLABS — DEMO PRESENTATION GUIDE
+  Warehouse & Logistics AI Platform  |  HackX 2026
+================================================================================
+
+OVERVIEW
+--------
+FleetLabs has 5 live sections + Command Center dashboard:
+  1. Command Center    – KPI overview, radar, maps, heatmaps
+  2. Inventory Scanner – Gemini 2.5 Flash + YOLO object detection
+  3. Load Intelligence – REKA Edge + YOLO live load estimation
+  4. Damage Control    – REKA Edge + YOLO damage triage
+  5. Last-Mile Risk    – Route risk scoring with weather + LLM
+  6. Agent Monitor     – Gemini 2.5 Flash HITL (Human-in-the-Loop) decisions
+
+DEMO ORDER (follow sidebar top→bottom): 
+  Command Center → Inventory → Load → Damage → Last-Mile → Agent Monitor
+
+
+================================================================================
+  PRE-DEMO CHECKLIST
+================================================================================
+
+  [ ] Backend running:  cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  [ ] Frontend running: cd frontend && npm run dev
+  [ ] .env has OPENROUTER_API_KEY set (required for Gemini inventory/agents + REKA CV pages)
+  [ ] Click "Seed Demo" on Inventory page to populate all DB tables
+  [ ] Prepare images on desktop (see per-section guides below)
+  [ ] Test one Inventory Scan to warm up YOLO model (first run is slow)
+  [ ] Browser: Chrome, fullscreen, dark mode OS, zoom 90% for wider view
+
+
+================================================================================
+  SECTION 1: COMMAND CENTER  (/dashboard)
+================================================================================
+
+  WHAT IT SHOWS:
+    - 4 KPI cards (Scans, Damage Alerts, Agent Events, Pending Review)
+    - Shipment map with delivery markers (Leaflet dark tiles)
+    - Operational Radar chart (6 logistics metrics)
+    - System Health radial gauges + Dock Throughput sparkline
+    - Warehouse Zone Utilization grid (hover for details)
+    - On-Shelf Availability heatmap
+    - Live Event Feed
+
+  DEMO SCRIPT:
+    1. "This is our Command Center — single-pane-of-glass for warehouse operations."
+    2. Hover over warehouse zones to show tooltips (temp, items, fill %)
+    3. Point to shelf heatmap: "Red zones are low-stock — trigger automated reorders."
+    4. Mention radar: "All 6 operational metrics at a glance."
+    5. Transition: "Let's drill into the first pipeline stage — scanning inventory."
+
+  DURATION: ~60 seconds
+
+
+================================================================================
+  SECTION 2: INVENTORY SCANNER  (/inventory)
+================================================================================
+
+  WHAT IT SHOWS:
+    - Image upload + browser live camera capture
+    - Natural language query input ("How many boxes on the top shelf?")
+    - YOLO bounding box detection overlay (operator view)
+    - **AI Product Analysis** — Google Gemini 2.5 Flash identifies actual brands, counts, positions
+    - Save to database + browse inventory DB
+
+  BEST DEMO IMAGES (download/prepare these):
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  ★ WAREHOUSE AISLE — boxes, pallets, drums on metal shelving    │
+    │    Search: "warehouse shelving boxes pallets" (Unsplash/Pexels) │
+    │    Why: shows diverse objects, YOLO detects cartons + pallets,  │
+    │         VLM lists actual product types and brands               │
+    │                                                                 │
+    │  ★ ELECTRONICS SHELF — phones, laptops, accessories in boxes    │
+    │    Search: "electronics store shelf products" (Unsplash)        │
+    │    Why: VLM identifies Apple, Samsung, etc. by brand name       │
+    │         Very impressive "AI knows what this is" moment          │
+    │                                                                 │
+    │  ★ GROCERY SECTION — branded items with clear labels            │
+    │    Search: "supermarket shelf branded products"                  │
+    │    Why: VLM reads brands and identifies every product           │
+    │                                                                 │
+    │  ✗ AVOID: Bottle-only shelves (YOLO just says "bottle" x60)    │
+    │  ✗ AVOID: Blurry or far-away shots (poor detection)            │
+    │  ✗ AVOID: Single-item images (not impressive enough)           │
+    └──────────────────────────────────────────────────────────────────┘
+
+  NATURAL LANGUAGE QUERY EXAMPLES:
+    - "How many cartons are on the top shelf?"
+    - "List all fragile items"
+    - "Count electronics by brand"
+    - "Identify all items that need cold storage"
+
+  DEMO SCRIPT:
+    1. Upload warehouse aisle photo
+    2. Type query: "Identify all products by brand and count them"
+    3. Click "Scan & Analyze"
+    4. Show detection overlay: "YOLO found the visible objects for the operator view"
+    5. Scroll to AI Analysis: "Gemini turns the raw image plus YOLO hints into DB-ready catalog rows"
+    6. Point out individual items: "Samsung Galaxy S24 x3, Apple AirPods x5..."
+    7. Click "Save to Inventory" → show it appears in DB browser below
+    8. "Natural language queries let warehouse staff ask questions in plain English"
+
+  DURATION: ~90 seconds
+
+
+================================================================================
+  SECTION 3: LOAD INTELLIGENCE  (/dashboard/load)
+================================================================================
+
+  WHAT IT SHOWS:
+    - Browser LIVE CAMERA + upload input
+    - YOLO detection overlay for visible cargo objects
+    - REKA Edge utilization verdict (fill %, loaded units, remaining capacity)
+    - Operator recommendation + evidence panel
+    - Live history sparkline (color-coded by status)
+
+  BEST DEMO IMAGES/VIDEO:
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  ★ OPEN TRUCK BED — half-loaded with boxes visible             │
+    │    Search: "open truck cargo boxes half loaded" (Pexels)        │
+    │    Why: gives ~40-60% fill, shows "underloaded" with ₹ waste   │
+    │                                                                 │
+    │  ★ FULL SHIPPING CONTAINER — stacked floor to ceiling           │
+    │    Search: "loaded shipping container interior boxes"            │
+    │    Why: gives ~85-95% fill, shows "optimal/overloaded"          │
+    │                                                                 │
+    │  ★ LIVE CAMERA (WOW FACTOR): Point laptop camera at a bag,     │
+    │    box, or container. Add/remove items in real-time to show     │
+    │    the gauge change live. Even a cardboard box with objects     │
+    │    works — the contrast-based detection picks up fill level.    │
+    │                                                                 │
+    │  ✗ AVOID: Empty spaces or flat surfaces (0% fill, boring)      │
+    │  ✗ AVOID: Very dark images (threshold fails)                   │
+    └──────────────────────────────────────────────────────────────────┘
+
+  DEMO SCRIPT:
+    1. Start with static upload: "Here's a half-loaded truck"
+    2. Point to gauge: "42% fill — that's ₹5,800 wasted capacity per trip"
+    3. Switch to LIVE CAMERA: "Now watch this in real-time"
+    4. Point camera at a box/bag with items inside
+    5. "As we add items, the gauge updates instantly"
+    6. Show history sparkline: "We track fill over time to optimize routes"
+
+  DURATION: ~60 seconds
+
+
+================================================================================
+  SECTION 4: DAMAGE CONTROL  (/dashboard/damage)
+================================================================================
+
+  WHAT IT SHOWS:
+    - Browser LIVE CAMERA + upload input
+    - YOLO detection overlay for visible cargo context
+    - REKA Edge damage verdict (severity, type, recommendation, evidence)
+    - Damage notes list instead of fake region math
+    - Action-oriented operator summary
+
+  BEST DEMO IMAGES:
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  ★★ WATER-DAMAGED CARDBOARD BOX — warped, discolored           │
+    │    Search: "water damaged cardboard box shipping"               │
+    │    Why: Triggers moisture detection (score >0.3 = CRITICAL)     │
+    │         Very visual — clear before/after difference             │
+    │                                                                 │
+    │  ★★ TORN/CRUSHED PACKAGE — visible tears and dents             │
+    │    Search: "damaged package delivery torn cardboard"            │
+    │    Why: Edge detection picks up tears perfectly                 │
+    │         High confidence + damage regions with bounding boxes    │
+    │                                                                 │
+    │  ★ DENTED METAL CONTAINER — industrial damage                   │
+    │    Search: "dented shipping container damaged"                  │
+    │    Why: Strong edges → high confidence physical damage          │
+    │                                                                 │
+    │  ★ PRISTINE PACKAGE (as contrast) — clean, undamaged           │
+    │    Search: "new cardboard box clean"                            │
+    │    Why: Shows NONE severity — proves model isn't false-positive │
+    │                                                                 │
+    │  ✗ AVOID: Abstract damage or very subtle scuffs                │
+    │  ✗ AVOID: Non-package items (furniture, vehicles)              │
+    └──────────────────────────────────────────────────────────────────┘
+
+  DEMO SCRIPT:
+    1. Upload torn/crushed package → wait for result
+    2. "CRITICAL severity detected — 92% confidence"
+    3. Point to moisture + contamination scores: "Multi-axis damage profiling"
+    4. Show damage regions: "4 regions identified with precise coordinates"
+    5. Click "Hold Shipment": "This auto-triggers our agent pipeline"
+    6. Upload pristine package: "Zero false positives — severity NONE"
+    7. "Every scan is logged for insurance claims and audit trails"
+
+  DURATION: ~75 seconds
+
+
+================================================================================
+  SECTION 5: LAST-MILE RISK  (/dashboard/lastmile)
+================================================================================
+
+  WHAT IT SHOWS:
+    - Route risk data table (Delivery ID, Route, Weather, Distance, Risk Score)
+    - Color-coded risk badges: Low / Moderate / Critical
+    - Sortable columns (click risk score to sort)
+    - Pending Agent Proposals (cards showing agent recommendations)
+    - Weather + traffic context per route
+
+  DEMO SCRIPT (NO SPECIAL IMAGES NEEDED — DB data):
+    1. "Seed Demo" populates 8 Indian logistics routes with realistic data
+    2. Click "Refresh Live Intel" first for current weather
+    3. Click through routes: "Mumbai→Pune via NH48: HIGH risk due to construction"
+    4. Sort by risk descending: "Hyderabad→Vijayawada is CRITICAL — flooding reported"
+    5. Show agent proposals below: "Our route agent automatically suggests alternatives"
+    6. "Ahmedabad→Vadodara via expressway — LOW risk, no action needed"
+    7. Mention clearly: "Weather is live; congestion is estimated until we plug in a paid traffic source"
+    8. Transition: "These proposals feed into our agent decision pipeline..."
+
+  DURATION: ~45 seconds
+
+
+================================================================================
+  SECTION 6: AGENT MONITOR  (/dashboard/agents)
+================================================================================
+
+  WHAT IT SHOWS:
+    - 5-agent pipeline progress bar (damage, route, dock, lastmile, orchestrator)
+    - Agent status cards with pending/approved/rejected counts
+    - Decision Queue: scrollable list of agent events
+    - For each event: severity badge, agent name, recommendation text
+    - Action buttons: APPROVE (green), REJECT (red), OVERRIDE (violet)
+    - Override dialog with custom action + reason input
+    - SSE live feed — events appear in real-time
+    - "Run All Agents" button triggers full pipeline sweep
+
+  DEMO SCRIPT (LIVE WITH OPENROUTER):
+    1. "This is our Human-in-the-Loop decision interface"
+    2. Click "Run All Agents": "Watch events stream in via SSE"
+    3. As events appear: "Damage agent flagged 2 critical shipments"
+    4. Click APPROVE on a clear recommendation
+    5. Click OVERRIDE on one: "I want to change the action to EXPEDITE"
+       Type reason: "Customer VIP — priority dispatch required"
+    6. Show the decided events update with timestamp
+    7. "Every decision is audited — who approved what, when, and why"
+    8. Filter by agent: "Let's see just the route agent's proposals"
+
+  DURATION: ~90 seconds
+
+
+================================================================================
+  TIMING SUMMARY
+================================================================================
+
+  Section              | Duration | Key Wow Factor
+  ---------------------|----------|--------------------------------------------
+  Command Center       |  60s     | Warehouse heatmap + radar + zone tooltips
+  Inventory Scanner    |  90s     | Vision LLM identifying brands by name
+  Load Intelligence    |  60s     | LIVE CAMERA with real-time gauge
+  Damage Control       |  75s     | CRITICAL severity + moisture detection
+  Last-Mile Risk       |  45s     | Indian routes with real weather/traffic data
+  Agent Monitor        |  90s     | Live LLM agents + human override workflow
+  ---------------------|----------|--------------------------------------------
+  TOTAL                | ~7 min   |
+
+  Buffer for transitions + Q&A: ~3 min
+  GRAND TOTAL: ~10 minutes
+
+
+================================================================================
+  TIPS FOR MAXIMUM WOW FACTOR
+================================================================================
+
+  1. ALWAYS seed demo data before starting (inventory page → "Seed Demo" button)
+    2. For Inventory Scanner: use images with DIVERSE, BRANDED objects (not just bottles)
+      - Gemini is the final extractor; YOLO is only the visible operator overlay
+  3. For Load Intelligence: the LIVE CAMERA mode is your single biggest wow moment
+     - Put a box on the table, add/remove items while camera watches
+  4. For Damage Control: keep TWO images ready — damaged + pristine (shows no FP)
+  5. For Agent Monitor: let events stream live, approve/reject in real-time
+  6. Don't rush — let animations complete (gauge fills, events streaming)
+  7. Keep browser at 90% zoom for wider dashboard view
+  8. If backend/API is slow, say "processing through our AI pipeline" 
+  9. Have a backup: if live demo fails, seed data makes all pages still look populated
+
+================================================================================

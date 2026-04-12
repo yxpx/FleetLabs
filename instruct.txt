@@ -1,0 +1,74 @@
+FleetLabs — Startup Instructions
+==================================
+
+Prerequisites:
+  - Python 3.10+
+  - Node.js 18+
+  - npm or pnpm
+
+──────────────────────────────────────────
+1. Backend Setup
+──────────────────────────────────────────
+
+cd backend
+
+# Create virtual environment (recommended)
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS/Linux
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set your OpenRouter API key
+# Edit backend/.env and replace the placeholder:
+#   OPENROUTER_API_KEY=your_actual_key_here
+
+# Start the backend server
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Backend will be available at: http://127.0.0.1:8000
+# API docs at: http://127.0.0.1:8000/docs
+
+──────────────────────────────────────────
+2. Frontend Setup
+──────────────────────────────────────────
+
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Frontend will be available at: http://localhost:3000
+
+──────────────────────────────────────────
+3. Quick Start (Both at Once)
+──────────────────────────────────────────
+
+# Terminal 1 — Backend
+cd backend && pip install -r requirements.txt && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# Terminal 2 — Frontend
+cd frontend && npm install && npm run dev
+
+──────────────────────────────────────────
+4. Environment Variables
+──────────────────────────────────────────
+
+Backend (backend/.env):
+  OPENROUTER_API_KEY=<your OpenRouter API key>
+
+Frontend (frontend/.env.local):
+  NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+
+──────────────────────────────────────────
+5. Notes
+──────────────────────────────────────────
+
+- The SQLite database (fleetlabs.db) is auto-created on first backend start.
+- SAM2, YOLOv8n, and EasyOCR models download automatically on first use.
+- The frontend connects to the backend at the URL specified in NEXT_PUBLIC_API_URL.
+- SSE events stream at GET /orchestrator/events for real-time updates.

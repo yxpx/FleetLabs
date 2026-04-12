@@ -1,0 +1,155 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+}
+
+:root {
+  --background: #fafafa;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #2563eb;
+  --primary-foreground: #fafafa;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #171717;
+  --muted: #f0f0f0;
+  --muted-foreground: #737373;
+  --accent: #f0f0f0;
+  --accent-foreground: #171717;
+  --destructive: #dc2626;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #2563eb;
+  --chart-1: #2563eb;
+  --chart-2: #059669;
+  --chart-3: #d97706;
+  --chart-4: #7c3aed;
+  --chart-5: #db2777;
+  --radius: 0;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f0f0f0;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #2563eb;
+}
+
+.dark {
+  --background: #111113;
+  --foreground: #e1e1e6;
+  --card: #1a1a1f;
+  --card-foreground: #e1e1e6;
+  --popover: #1a1a1f;
+  --popover-foreground: #e1e1e6;
+  --primary: #4d8eff;
+  --primary-foreground: #fafafa;
+  --secondary: #222228;
+  --secondary-foreground: #e1e1e6;
+  --muted: #222228;
+  --muted-foreground: #8e8e9a;
+  --accent: #222228;
+  --accent-foreground: #e1e1e6;
+  --destructive: #e54545;
+  --border: #2a2a32;
+  --input: #2a2a32;
+  --ring: #4d8eff;
+  --chart-1: #4d8eff;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #a78bfa;
+  --chart-5: #f472b6;
+  --sidebar: #141416;
+  --sidebar-foreground: #e1e1e6;
+  --sidebar-primary: #4d8eff;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #222228;
+  --sidebar-accent-foreground: #e1e1e6;
+  --sidebar-border: #2a2a32;
+  --sidebar-ring: #4d8eff;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Leaflet dark popup overrides */
+.dark-popup .leaflet-popup-content-wrapper {
+  background: #1a1a1f;
+  color: #e1e1e6;
+  border-radius: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid #2a2a32;
+}
+.dark-popup .leaflet-popup-tip {
+  background: #1a1a1f;
+}
+.leaflet-control-zoom a {
+  background: #1a1a1f !important;
+  color: #8e8e9a !important;
+  border-color: #2a2a32 !important;
+  border-radius: 0 !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #222228 !important;
+  color: #e1e1e6 !important;
+}

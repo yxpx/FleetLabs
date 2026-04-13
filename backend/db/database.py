@@ -34,6 +34,25 @@ async def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            CREATE TABLE IF NOT EXISTS inventory_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_id TEXT NOT NULL,
+                item_id INTEGER,
+                label TEXT,
+                confidence REAL,
+                bbox TEXT,
+                area REAL,
+                ocr_texts TEXT,
+                source TEXT,
+                brand TEXT,
+                category TEXT,
+                count INTEGER,
+                location TEXT,
+                condition TEXT,
+                evidence TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE TABLE IF NOT EXISTS damage_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 shipment_id TEXT,

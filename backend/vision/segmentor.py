@@ -1,5 +1,7 @@
 """Fast inventory pipeline: Gemini Vision direct extraction."""
 
+import re
+
 import cv2
 import numpy as np
 
@@ -35,6 +37,51 @@ def _fallback_inventory_analysis(raw_text: str, query: str) -> dict:
         "query_answer": cleaned[:240] if cleaned else None,
         "raw_output": raw_text,
     }
+
+
+def _extract_string_field(block: str, key: str, default: str) -> str:
+    pattern = rf'"{key}"\s*:\s*"((?:[^"\\]|\\.)*)"'
+    match = re.search(pattern, block, flags=re.S)
+    if match:
+        return match.group(1).strip() or default
+    return default
+
+
+def _extract_number_field(block: str, key: str, default: float) -> float:
+    pattern = rf'"{key}"\s*:\s*(-?\d+(?:\.\d+)?)'
+    match = re.search(pattern, block)
+    if match:
+        try:
+            return float(match.group(1))
+        except ValueError:
+            return default
+    return default
+
+
+def _extract_raw_items(raw_text: str) -> list[dict]:
+    items_anchor = raw_text.find('"items"')
+    if items_anchor == -1:
+        return []
+
+    object_blocks = re.findall(r'\{[^{}]*"name"\s*:\s*"[^{}]*?\}', raw_text[items_anchor:], flags=re.S)
+    extracted: list[dict] = []
+    for block in object_blocks:
+        name = _extract_string_field(block, "name", "unknown")
+        if name == "unknown":
+            continue
+        extracted.append(
+            {
+                "name": name,
+                "brand": _extract_string_field(block, "brand", "unknown"),
+                "category": _extract_string_field(block, "category", "unknown"),
+                "count": max(1, int(_extract_number_field(block, "count", 1))),
+                "location": _extract_string_field(block, "location", "full-frame"),
+                "condition": _extract_string_field(block, "condition", "unclear"),
+                "confidence": max(0.0, min(1.0, _extract_number_field(block, "confidence", 0.2))),
+                "evidence": _extract_string_field(block, "evidence", "Recovered from raw model output."),
+            }
+        )
+    return extracted
 
 
 def segment_and_analyze(image_bytes: bytes, query: str = "") -> dict:
@@ -85,6 +132,8 @@ def segment_and_analyze(image_bytes: bytes, query: str = "") -> dict:
     if analysis is not None:
         raw_items = analysis.get("items")
         items = raw_items if isinstance(raw_items, list) else []
+        if not items and raw_output:
+            items = _extract_raw_items(raw_output)
         total_items = analysis.get("total_items")
         analysis = {
             "items": items,
@@ -95,7 +144,20 @@ def segment_and_analyze(image_bytes: bytes, query: str = "") -> dict:
         }
     else:
         fallback_text = raw_output or ""
-        analysis = _fallback_inventory_analysis(fallback_text, query) if fallback_text else None
+        if fallback_text:
+            recovered_items = _extract_raw_items(fallback_text)
+            if recovered_items:
+                analysis = {
+                    "items": recovered_items,
+                    "total_items": len(recovered_items),
+                    "summary": "Recovered items from non-strict model output.",
+                    "query_answer": None,
+                    "raw_output": fallback_text,
+                }
+            else:
+                analysis = _fallback_inventory_analysis(fallback_text, query)
+        else:
+            analysis = None
         items = analysis.get("items", []) if analysis else []
 
     label_counts: dict[str, int] = {}

@@ -664,12 +664,14 @@ export default function InventoryPage() {
                       </div>
                     </ScrollArea>
                     {scanResult.ai_analysis.raw_output && (
-                      <div className="border border-border bg-background px-3 py-3">
-                        <p className="text-[11px] font-medium text-muted-foreground mb-2">Raw Model Output</p>
-                        <p className="text-xs whitespace-pre-wrap wrap-break-word text-foreground/85">
+                      <details className="border border-border bg-background px-3 py-3">
+                        <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground select-none hover:text-foreground">
+                          Raw Model Output
+                        </summary>
+                        <p className="mt-2 text-xs whitespace-pre-wrap wrap-break-word text-foreground/85">
                           {scanResult.ai_analysis.raw_output}
                         </p>
-                      </div>
+                      </details>
                     )}
                   </CardContent>
                 </Card>

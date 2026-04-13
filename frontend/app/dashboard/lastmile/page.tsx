@@ -176,6 +176,17 @@ function routeRiskScore(route: RouteRiskRow): number {
   return Math.min(100, Math.round(route.congestion_pct + route.predicted_delay_mins + levelBoost));
 }
 
+function predictedDelayFromMetrics(baseDurationMins: number, congestionPct: number): number {
+  return Math.round(baseDurationMins * (congestionPct / 100) * 0.38);
+}
+
+function riskLevelFromDelay(delayMinutes: number): string {
+  if (delayMinutes >= 60) return "critical";
+  if (delayMinutes >= 35) return "high";
+  if (delayMinutes >= 18) return "medium";
+  return "low";
+}
+
 function parsePayload(payload: string): Record<string, unknown> | null {
   try {
     return JSON.parse(payload) as Record<string, unknown>;
@@ -225,6 +236,16 @@ export default function LastMilePage() {
   const [isPreviewingRoute, setIsPreviewingRoute] = useState(false);
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [plannerFeedback, setPlannerFeedback] = useState<string | null>(null);
+  const [dialogOriginQuery, setDialogOriginQuery] = useState("");
+  const [dialogDestinationQuery, setDialogDestinationQuery] = useState("");
+  const [dialogOriginResults, setDialogOriginResults] = useState<LocationOption[]>([]);
+  const [dialogDestinationResults, setDialogDestinationResults] = useState<LocationOption[]>([]);
+  const [dialogSelectedOrigin, setDialogSelectedOrigin] = useState<LocationOption | null>(null);
+  const [dialogSelectedDestination, setDialogSelectedDestination] = useState<LocationOption | null>(null);
+  const [dialogSearchingOrigin, setDialogSearchingOrigin] = useState(false);
+  const [dialogSearchingDestination, setDialogSearchingDestination] = useState(false);
+  const [dialogRoutePreview, setDialogRoutePreview] = useState<RoutePreview | null>(null);
+  const [isAutoFillingDialog, setIsAutoFillingDialog] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -290,6 +311,46 @@ export default function LastMilePage() {
     return () => clearTimeout(timeoutId);
   }, [destinationQuery, selectedDestination]);
 
+  useEffect(() => {
+    const query = dialogOriginQuery.trim();
+    if (dialogMode !== "add" || query.length < 2 || dialogSelectedOrigin?.label === query) {
+      setDialogOriginResults([]);
+      return;
+    }
+    const timeoutId = setTimeout(async () => {
+      setDialogSearchingOrigin(true);
+      try {
+        const results = await apiFetch<LocationOption[]>(`/locations/search?q=${encodeURIComponent(query)}&limit=5`);
+        setDialogOriginResults(results);
+      } catch {
+        setDialogOriginResults([]);
+      } finally {
+        setDialogSearchingOrigin(false);
+      }
+    }, 250);
+    return () => clearTimeout(timeoutId);
+  }, [dialogMode, dialogOriginQuery, dialogSelectedOrigin]);
+
+  useEffect(() => {
+    const query = dialogDestinationQuery.trim();
+    if (dialogMode !== "add" || query.length < 2 || dialogSelectedDestination?.label === query) {
+      setDialogDestinationResults([]);
+      return;
+    }
+    const timeoutId = setTimeout(async () => {
+      setDialogSearchingDestination(true);
+      try {
+        const results = await apiFetch<LocationOption[]>(`/locations/search?q=${encodeURIComponent(query)}&limit=5`);
+        setDialogDestinationResults(results);
+      } catch {
+        setDialogDestinationResults([]);
+      } finally {
+        setDialogSearchingDestination(false);
+      }
+    }, 250);
+    return () => clearTimeout(timeoutId);
+  }, [dialogMode, dialogDestinationQuery, dialogSelectedDestination]);
+
   const refreshLiveRoutes = useCallback(async () => {
     setIsRefreshingLive(true);
     try {
@@ -313,6 +374,13 @@ export default function LastMilePage() {
     setEditRouteId(null);
     setForm(emptyForm);
     setDialogFeedback(null);
+    setDialogOriginQuery("");
+    setDialogDestinationQuery("");
+    setDialogOriginResults([]);
+    setDialogDestinationResults([]);
+    setDialogSelectedOrigin(null);
+    setDialogSelectedDestination(null);
+    setDialogRoutePreview(null);
   };
 
   const openEditDialog = (route: RouteRiskRow) => {
@@ -330,9 +398,27 @@ export default function LastMilePage() {
       weather: route.weather || "",
     });
     setDialogFeedback(null);
+    setDialogOriginQuery("");
+    setDialogDestinationQuery("");
+    setDialogOriginResults([]);
+    setDialogDestinationResults([]);
+    setDialogSelectedOrigin(null);
+    setDialogSelectedDestination(null);
+    setDialogRoutePreview(null);
   };
 
-  const closeDialog = () => { setDialogMode(null); setEditRouteId(null); setDialogFeedback(null); };
+  const closeDialog = () => {
+    setDialogMode(null);
+    setEditRouteId(null);
+    setDialogFeedback(null);
+    setDialogOriginQuery("");
+    setDialogDestinationQuery("");
+    setDialogOriginResults([]);
+    setDialogDestinationResults([]);
+    setDialogSelectedOrigin(null);
+    setDialogSelectedDestination(null);
+    setDialogRoutePreview(null);
+  };
 
   const selectOrigin = (option: LocationOption) => {
     setSelectedOrigin(option);
@@ -352,6 +438,30 @@ export default function LastMilePage() {
     }));
     setRoutePreview(null);
     setPlannerFeedback(null);
+  };
+
+  const selectDialogOrigin = (option: LocationOption) => {
+    setDialogSelectedOrigin(option);
+    setDialogOriginQuery(option.label);
+    setDialogOriginResults([]);
+    setDialogRoutePreview(null);
+    setDialogFeedback(null);
+    setForm((current) => ({
+      ...current,
+      route: dialogSelectedDestination ? `${option.label} → ${dialogSelectedDestination.label}` : current.route,
+    }));
+  };
+
+  const selectDialogDestination = (option: LocationOption) => {
+    setDialogSelectedDestination(option);
+    setDialogDestinationQuery(option.label);
+    setDialogDestinationResults([]);
+    setDialogRoutePreview(null);
+    setDialogFeedback(null);
+    setForm((current) => ({
+      ...current,
+      route: dialogSelectedOrigin ? `${dialogSelectedOrigin.label} → ${option.label}` : current.route,
+    }));
   };
 
   const previewRoute = useCallback(async () => {
@@ -418,7 +528,53 @@ export default function LastMilePage() {
     }
   }, [load, plannerForm, routePreview, selectedDestination, selectedOrigin]);
 
+  const autofillDialogRoute = useCallback(async () => {
+    if (!dialogSelectedOrigin || !dialogSelectedDestination) {
+      setDialogFeedback("Choose both origin and destination from search results first.");
+      return;
+    }
+
+    setIsAutoFillingDialog(true);
+    setDialogFeedback(null);
+    try {
+      const preview = await apiFetch<RoutePreview>("/routes/preview", {
+        method: "POST",
+        body: JSON.stringify({
+          origin: dialogSelectedOrigin,
+          destination: dialogSelectedDestination,
+        }),
+      });
+
+      setDialogRoutePreview(preview);
+      setForm((current) => ({
+        ...current,
+        route: preview.route,
+        distance_km: String(preview.distance_km),
+        base_duration_mins: String(preview.base_duration_mins),
+        congestion_pct: String(Math.round(preview.congestion_pct)),
+        predicted_delay_mins: String(preview.predicted_delay_mins),
+        risk_level: preview.risk_level,
+        suggested_alternate: preview.suggested_alternate || "",
+        reasons: preview.reasons || "",
+        weather: preview.weather || current.weather,
+      }));
+      setDialogFeedback("Route metrics auto-filled. Congestion is still editable.");
+    } catch (err) {
+      setDialogFeedback(`Error: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      setIsAutoFillingDialog(false);
+    }
+  }, [dialogSelectedDestination, dialogSelectedOrigin]);
+
   const handleSave = useCallback(async () => {
+    if (dialogMode === "add" && (!dialogSelectedOrigin || !dialogSelectedDestination)) {
+      setDialogFeedback("Pick origin and destination first.");
+      return;
+    }
+    if (dialogMode === "add" && !dialogRoutePreview) {
+      setDialogFeedback("Use Auto-Fill before saving a new route.");
+      return;
+    }
     if (!form.route.trim()) { setDialogFeedback("Route name is required"); return; }
     setIsSaving(true);
     setDialogFeedback(null);
@@ -433,6 +589,17 @@ export default function LastMilePage() {
       reasons: form.reasons.trim(),
       weather: form.weather.trim(),
       created_at: new Date().toISOString(),
+      ...(dialogMode === "add" && dialogRoutePreview
+        ? {
+            origin_name: dialogRoutePreview.origin_name,
+            origin_lat: dialogRoutePreview.origin_lat,
+            origin_lng: dialogRoutePreview.origin_lng,
+            destination_name: dialogRoutePreview.destination_name,
+            destination_lat: dialogRoutePreview.destination_lat,
+            destination_lng: dialogRoutePreview.destination_lng,
+            route_geometry: dialogRoutePreview.route_geometry,
+          }
+        : {}),
     };
     try {
       if (dialogMode === "add") {
@@ -443,12 +610,14 @@ export default function LastMilePage() {
         });
         if (res.row) setRoutes((prev) => [res.row, ...prev]);
       } else if (editRouteId !== null) {
-        await apiFetch(`/db/route_risks/${editRouteId}`, {
+        const res = await apiFetch<{ status: string; row: RouteRiskRow }>(`/db/route_risks/${editRouteId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ updates: payload }),
         });
-        setRoutes((prev) => prev.map((r) => r.id === editRouteId ? { ...r, ...payload, suggested_alternate: payload.suggested_alternate } : r));
+        if (res.row) {
+          setRoutes((prev) => prev.map((r) => r.id === editRouteId ? res.row : r));
+        }
       }
       setDialogFeedback("Saved");
       setTimeout(closeDialog, 600);
@@ -457,7 +626,7 @@ export default function LastMilePage() {
     } finally {
       setIsSaving(false);
     }
-  }, [dialogMode, editRouteId, form]);
+  }, [dialogMode, dialogRoutePreview, dialogSelectedDestination, dialogSelectedOrigin, editRouteId, form]);
 
   const handleDelete = useCallback(async (id: number) => {
     try {
@@ -491,7 +660,23 @@ export default function LastMilePage() {
     [routes],
   );
 
-  const updateForm = (key: keyof RouteForm, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const updateForm = (key: keyof RouteForm, value: string) => setForm((current) => {
+    const next = { ...current, [key]: value };
+
+    if (dialogMode === "add" && (key === "congestion_pct" || key === "base_duration_mins")) {
+      const baseDuration = Number(key === "base_duration_mins" ? value : next.base_duration_mins) || 0;
+      const congestionPct = Math.max(0, Math.min(100, Number(key === "congestion_pct" ? value : next.congestion_pct) || 0));
+      const predictedDelayMins = predictedDelayFromMetrics(baseDuration, congestionPct);
+      next.predicted_delay_mins = String(predictedDelayMins);
+      next.risk_level = riskLevelFromDelay(predictedDelayMins);
+
+      if (dialogSelectedOrigin && dialogSelectedDestination) {
+        next.reasons = `${dialogSelectedOrigin.label} to ${dialogSelectedDestination.label} is running at ${Math.round(congestionPct)}% estimated congestion with ${predictedDelayMins} min projected delay. Source: manual congestion override.`;
+      }
+    }
+
+    return next;
+  });
   const updatePlannerForm = (key: keyof PlannerForm, value: string) => setPlannerForm((current) => ({ ...current, [key]: value }));
 
   return (
@@ -815,39 +1000,73 @@ export default function LastMilePage() {
             <DialogTitle>{dialogMode === "add" ? "Add New Route" : "Edit Route"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
+            {dialogMode === "add" && (
+              <>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <LocationSearchField
+                    label="Origin"
+                    placeholder="Search origin city or hub"
+                    query={dialogOriginQuery}
+                    selected={dialogSelectedOrigin}
+                    loading={dialogSearchingOrigin}
+                    results={dialogOriginResults}
+                    onQueryChange={setDialogOriginQuery}
+                    onSelect={selectDialogOrigin}
+                  />
+                  <LocationSearchField
+                    label="Destination"
+                    placeholder="Search destination city or hub"
+                    query={dialogDestinationQuery}
+                    selected={dialogSelectedDestination}
+                    loading={dialogSearchingDestination}
+                    results={dialogDestinationResults}
+                    onQueryChange={setDialogDestinationQuery}
+                    onSelect={selectDialogDestination}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 border border-border bg-background px-3 py-2.5">
+                  <p className="text-xs text-muted-foreground">Pick both endpoints, then auto-fill route distance, duration, delay, weather, and a default congestion estimate.</p>
+                  <Button type="button" variant="outline" size="sm" onClick={autofillDialogRoute} disabled={isAutoFillingDialog}>
+                    {isAutoFillingDialog ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCcw className="h-3.5 w-3.5" />}
+                    Auto-Fill
+                  </Button>
+                </div>
+              </>
+            )}
             <div>
               <label className="text-xs text-muted-foreground">Route (e.g. Mumbai → Pune via NH48)</label>
               <Input value={form.route} onChange={(e) => updateForm("route", e.target.value)} placeholder="Origin → Destination via Highway" />
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">Distance (km)</label>
-                <Input type="number" min={0} value={form.distance_km} onChange={(e) => updateForm("distance_km", e.target.value)} />
+                <label className="text-xs text-muted-foreground">Distance (km){dialogMode === "add" ? " · auto" : ""}</label>
+                <Input type="number" min={0} value={form.distance_km} onChange={(e) => updateForm("distance_km", e.target.value)} readOnly={dialogMode === "add"} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Base Duration (min)</label>
-                <Input type="number" min={0} value={form.base_duration_mins} onChange={(e) => updateForm("base_duration_mins", e.target.value)} />
+                <label className="text-xs text-muted-foreground">Base Duration (min){dialogMode === "add" ? " · auto" : ""}</label>
+                <Input type="number" min={0} value={form.base_duration_mins} onChange={(e) => updateForm("base_duration_mins", e.target.value)} readOnly={dialogMode === "add"} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Weather</label>
-                <Input value={form.weather} onChange={(e) => updateForm("weather", e.target.value)} placeholder="Clear, 30°C" />
+                <label className="text-xs text-muted-foreground">Weather{dialogMode === "add" ? " · auto" : ""}</label>
+                <Input value={form.weather} onChange={(e) => updateForm("weather", e.target.value)} placeholder="Clear, 30°C" readOnly={dialogMode === "add"} />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">Congestion %</label>
+                <label className="text-xs text-muted-foreground">Congestion %{dialogMode === "add" ? " · auto, editable" : ""}</label>
                 <Input type="number" min={0} max={100} value={form.congestion_pct} onChange={(e) => updateForm("congestion_pct", e.target.value)} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Predicted Delay (min)</label>
-                <Input type="number" min={0} value={form.predicted_delay_mins} onChange={(e) => updateForm("predicted_delay_mins", e.target.value)} />
+                <label className="text-xs text-muted-foreground">Predicted Delay (min){dialogMode === "add" ? " · auto" : ""}</label>
+                <Input type="number" min={0} value={form.predicted_delay_mins} onChange={(e) => updateForm("predicted_delay_mins", e.target.value)} readOnly={dialogMode === "add"} />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Risk Level</label>
+                <label className="text-xs text-muted-foreground">Risk Level{dialogMode === "add" ? " · auto" : ""}</label>
                 <select
                   className="flex h-9 w-full border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   value={form.risk_level}
                   onChange={(e) => updateForm("risk_level", e.target.value)}
+                  disabled={dialogMode === "add"}
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>

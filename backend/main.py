@@ -45,6 +45,36 @@ app.add_middleware(
 traffic_service = TrafficAnalyticsService()
 
 
+async def _sync_inventory_items(db, scan_id: str, items: list[dict[str, Any]]):
+    await db.execute("DELETE FROM inventory_items WHERE scan_id = ?", (scan_id,))
+
+    for index, item in enumerate(items):
+        await db.execute(
+            """
+            INSERT INTO inventory_items (
+                scan_id, item_id, label, confidence, bbox, area, ocr_texts, source,
+                brand, category, count, location, condition, evidence
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                scan_id,
+                item.get("id", index),
+                item.get("label") or item.get("name") or "unknown",
+                item.get("confidence"),
+                json.dumps(item.get("bbox", [])),
+                item.get("area"),
+                json.dumps(item.get("ocr_texts", [])),
+                item.get("source"),
+                item.get("brand"),
+                item.get("category"),
+                item.get("count"),
+                item.get("location"),
+                item.get("condition"),
+                item.get("evidence"),
+            ),
+        )
+
+
 # ──────────────────────────────────────────────
 # Health
 # ──────────────────────────────────────────────
@@ -102,6 +132,7 @@ async def inventory_save(req: InventorySaveRequest):
                 req.natural_language_query,
             ),
         )
+        await _sync_inventory_items(db, req.scan_id, req.items)
         await db.commit()
         return {"status": "saved", "scan_id": req.scan_id, "item_count": item_count}
     finally:
@@ -142,6 +173,7 @@ async def delete_inventory(scan_id: str):
     """Delete an inventory scan"""
     db = await get_db()
     try:
+        await db.execute("DELETE FROM inventory_items WHERE scan_id = ?", (scan_id,))
         cursor = await db.execute(
             "DELETE FROM inventory_scans WHERE scan_id = ?", (scan_id,)
         )
@@ -175,6 +207,7 @@ async def update_inventory_item(scan_id: str, body: dict):
             "UPDATE inventory_scans SET items = ? WHERE scan_id = ?",
             (json.dumps(items), scan_id),
         )
+        await _sync_inventory_items(db, scan_id, items)
         await db.commit()
         return {"status": "updated", "scan_id": scan_id}
     finally:
@@ -218,7 +251,7 @@ async def vision_vehicle_count(file: UploadFile = File(...)):
 # Database Browser
 # ──────────────────────────────────────────────
 ALLOWED_TABLES = [
-    "inventory_scans", "damage_events", "dock_slots",
+    "inventory_scans", "inventory_items", "damage_events", "dock_slots",
     "agent_events", "route_risks", "deliveries",
 ]
 
@@ -633,11 +666,11 @@ async def _build_route_plan(
     weather_label, temperature, wind_speed, weather_code = await _fetch_weather(destination_lat, destination_lng)
 
     india_now = datetime.now(timezone.utc) + timedelta(hours=5, minutes=30)
-    rush_factor = 26 if india_now.hour in {8, 9, 10, 17, 18, 19, 20} else 14 if 11 <= india_now.hour <= 16 else 7
-    weather_factor = 18 if (weather_code or 0) >= 80 else 12 if weather_code in {45, 48, 61, 63, 65} else 6 if weather_code in {1, 2, 3, 51} else 0
-    route_factor = min(18, round(distance_km / 40))
-    congestion_pct = min(92.0, float(max(8, rush_factor + weather_factor + route_factor)))
-    predicted_delay_mins = round(base_duration_mins * (congestion_pct / 100) * 0.55)
+    rush_factor = 18 if india_now.hour in {8, 9, 10, 17, 18, 19, 20} else 10 if 11 <= india_now.hour <= 16 else 4
+    weather_factor = 12 if (weather_code or 0) >= 80 else 8 if weather_code in {45, 48, 61, 63, 65} else 4 if weather_code in {1, 2, 3, 51} else 0
+    route_factor = min(10, round(distance_km / 60))
+    congestion_pct = min(78.0, float(max(6, rush_factor + weather_factor + route_factor)))
+    predicted_delay_mins = round(base_duration_mins * (congestion_pct / 100) * 0.38)
     risk_level = _risk_level_from_delay(predicted_delay_mins)
     suggested_alternate = (
         f"Stagger departure by {min(30, max(10, predicted_delay_mins // 2))} min and re-check the corridor before dispatch."
@@ -695,11 +728,11 @@ def _extract_route_cities(route: str) -> tuple[str | None, str | None]:
 
 
 def _risk_level_from_delay(delay_minutes: int) -> str:
-    if delay_minutes >= 40:
+    if delay_minutes >= 60:
         return "critical"
-    if delay_minutes >= 25:
+    if delay_minutes >= 35:
         return "high"
-    if delay_minutes >= 12:
+    if delay_minutes >= 18:
         return "medium"
     return "low"
 

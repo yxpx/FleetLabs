@@ -129,7 +129,7 @@ export default function LoadPage() {
         <div>
           <h2 className="text-lg font-semibold">Load Intelligence</h2>
           <p className="text-[13px] text-muted-foreground">
-            Gemini-powered load utilization analysis — upload or capture a truck/container image.
+            Load utilization analysis — upload or capture a truck/container image.
           </p>
         </div>
         <div className="flex gap-2">
@@ -251,7 +251,7 @@ export default function LoadPage() {
             {isAnalyzing && !result ? (
               <div className="flex items-center gap-3 py-6 justify-center text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm">Waiting for Gemini verdict…</span>
+                <span className="text-sm">Waiting for verdict…</span>
               </div>
             ) : result ? (
               <>

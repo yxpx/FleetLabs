@@ -165,7 +165,7 @@ export default function DockPage() {
         <div>
           <h2 className="text-lg font-semibold">Dock Management</h2>
           <p className="text-[13px] text-muted-foreground">
-            Monitor dock slot availability and yard vehicle counts with Gemini Vision AI.
+            Monitor dock slot availability and yard vehicle counts.
           </p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={loadSlots} disabled={isLoading}>

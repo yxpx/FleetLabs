@@ -489,7 +489,7 @@ export default function InventoryPage() {
       <div>
         <h2 className="text-lg font-semibold">Inventory Scanner</h2>
         <p className="text-[13px] text-muted-foreground">
-          Gemini Vision analysis — image in, AI extraction into database-ready catalog rows.
+          Vision analysis — image in, AI extraction into database-ready catalog rows.
         </p>
       </div>
 
@@ -565,12 +565,12 @@ export default function InventoryPage() {
           {scanPhase === "analyzing" && (
             <div className="flex items-center gap-3 border border-border bg-card px-4 py-2.5">
               <Loader2 className="h-4 w-4 text-primary animate-spin" />
-              <span className="text-sm font-medium">Gemini extracting inventory…</span>
+              <span className="text-sm font-medium">Extracting inventory…</span>
             </div>
           )}
           <Button className="w-full gap-2 h-11" size="lg" disabled={!selectedImage || isScanning} onClick={handleScan}>
             {isScanning ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Gemini analyzing…</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing…</>
             ) : (
               <><ScanLine className="h-4 w-4" /> Scan & Analyze</>
             )}
@@ -786,7 +786,7 @@ export default function InventoryPage() {
             <div className="flex flex-col items-center justify-center border-2 border-dashed border-border p-16">
               <ScanLine className="h-10 w-10 text-muted-foreground mb-3" />
               <p className="text-sm text-muted-foreground text-center">
-                Upload or capture an image and click Scan to see<br />Gemini analysis and extraction here.
+                Upload or capture an image and click Scan to see<br />Analysis and extraction here.
               </p>
             </div>
           )}

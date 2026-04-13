@@ -290,7 +290,7 @@ export default function DashboardPage() {
             <span className="font-medium text-foreground">Workflow:</span>
             Input Data
             <ArrowRight className="h-3 w-3 shrink-0" />
-            Gemini Vision Analysis
+            Vision Analysis
             <ArrowRight className="h-3 w-3 shrink-0" />
             Agent Evaluation
             <ArrowRight className="h-3 w-3 shrink-0" />

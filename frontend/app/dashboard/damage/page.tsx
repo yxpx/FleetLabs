@@ -135,7 +135,7 @@ export default function DamagePage() {
         <div>
           <h2 className="text-lg font-semibold">Damage Control</h2>
           <p className="text-[13px] text-muted-foreground">
-            Gemini-powered damage assessment — upload a shipment image for AI triage.
+            Damage assessment — upload a shipment image for AI triage.
           </p>
         </div>
         <div className="flex gap-2">
